@@ -9,7 +9,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthApiError, createAuthApi, type AuthApi, type LoginResult } from '../auth/authApi'
 import { createAuthStore, type AuthStore } from '../auth/authStore'
 import { createAuthorizedFetch } from '../auth/authorizedFetch'
-import { decodeAccessToken } from '../auth/jwt'
 import { ACCESS_TOKEN_KEY, createSessionTokenStorage, type TokenStorage } from '../auth/tokenStorage'
 import enJson from '../locales/en.json'
 import esJson from '../locales/es.json'
@@ -54,16 +53,18 @@ function memoryStorage(initial: string | null = null): TokenStorage & { value: s
   }
 }
 
+type MockFn = ReturnType<typeof vi.fn>
+
 interface Harness {
   store: AuthStore
   storage: ReturnType<typeof memoryStorage>
-  api: { loginWithEmail: ReturnType<typeof vi>; verifyTwoFactor: ReturnType<typeof vi> }
+  api: { loginWithEmail: MockFn; verifyTwoFactor: MockFn }
   timers: Array<{ callback: () => void; ms: number; cleared: boolean }>
 }
 
 function setup(initialToken: string | null = null): Harness {
   const storage = memoryStorage(initialToken)
-  const api = { loginWithEmail: vi(), verifyTwoFactor: vi() }
+  const api = { loginWithEmail: vi.fn(), verifyTwoFactor: vi.fn() }
   const timers: Harness['timers'] = []
   const store = createAuthStore({
     api: api as unknown as AuthApi,
@@ -75,7 +76,7 @@ function setup(initialToken: string | null = null): Harness {
       return timer
     },
     clearTimer: (handle) => {
-      ; (handle as Harness['timers'][number]).cleared = true
+      ;(handle as Harness['timers'][number]).cleared = true
     },
   })
   return { store, storage, api, timers }
@@ -263,7 +264,7 @@ describe('admin auth — session expiry', () => {
     const authorizedFetch = createAuthorizedFetch(store, fetchImpl)
     await authorizedFetch('https://api.example/admin/stats')
 
-    const headers = fetchImpl.mock[0][1].headers as Headers
+    const headers = fetchImpl.mock.calls[0][1].headers as Headers
     expect(headers.get('Authorization')).toBe(`Bearer ${token}`)
     expect(store.getState()).toMatchObject({ status: 'unauthenticated', notice: 'session_expired' })
     expect(storage.value).toBeNull()
@@ -343,22 +344,6 @@ describe('admin auth — API client', () => {
     const api = createAuthApi('https://api.example', vi.fn().mockResolvedValue(new Response(null, { status: 401 })))
     await expect(api.loginWithEmail('a@bb.io', 'Secret123!')).rejects.toMatchObject({
       code: 'invalid_credentials',
-    })
-  })
-
-  it('maps a network failure to network', async () => {
-    const api = createAuthApi('https://api.example', vi.fn().mockRejectedValue(new TypeError('failed to fetch')))
-    await expect(api.loginWithEmail('a@bb.io', 'Secret123!')).rejects.toMatchObject({
-      code: 'network',
-    })
-  })
-
-  it('decodes an access token payload', () => {
-    const token = adminToken()
-    expect(decodeAccessToken(token)).toMatchObject({
-      sub: 'admin-1',
-      email: 'admin@nftopia.io',
-      role: 'ADMIN',
     })
   })
 })

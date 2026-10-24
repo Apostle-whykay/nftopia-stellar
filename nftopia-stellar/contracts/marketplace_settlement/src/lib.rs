@@ -1,5 +1,5 @@
-#no_std
-[#allow(clippy::too_many_arguments)]
+#![no_std]
+#![allow(clippy::too_many_arguments)]
 
 // Module declarations
 pub mod atomic_swap;
