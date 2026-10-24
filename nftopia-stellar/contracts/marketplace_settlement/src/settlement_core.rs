@@ -824,7 +824,7 @@ impl MarketplaceSettlement {
             for i in 0..trade.initiator_nfts.len() {
                 let item = trade.initiator_nfts.get(i).unwrap();
                 if !asset_utils::check_nft_ownership(
-                    &item.contract,
+                    &item.nft_address,
                     item.token_id,
                     &trade.initiator,
                     &env,
@@ -837,10 +837,10 @@ impl MarketplaceSettlement {
             for i in 0..trade.initiator_nfts.len() {
                 let item = trade.initiator_nfts.get(i).unwrap();
                 asset_utils::transfer_nft(
-                    &item.contract,
-                    item.token_id,
+                    &item.nft_address,
                     &trade.initiator,
                     &counterparty,
+                    item.token_id,
                     &env,
                 )?;
             }
@@ -849,7 +849,7 @@ impl MarketplaceSettlement {
             for i in 0..trade.counterparty_nfts.len() {
                 let item = trade.counterparty_nfts.get(i).unwrap();
                 if !asset_utils::check_nft_ownership(
-                    &item.contract,
+                    &item.nft_address,
                     item.token_id,
                     &counterparty,
                     &env,
@@ -862,10 +862,10 @@ impl MarketplaceSettlement {
             for i in 0..trade.counterparty_nfts.len() {
                 let item = trade.counterparty_nfts.get(i).unwrap();
                 asset_utils::transfer_nft(
-                    &item.contract,
-                    item.token_id,
+                    &item.nft_address,
                     &counterparty,
                     &trade.initiator,
+                    item.token_id,
                     &env,
                 )?;
             }
